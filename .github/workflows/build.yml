@@ -1,0 +1,52 @@
+name: Build SteamVita Public
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel 2
+
+      - name: Prepare public update manifest
+        shell: bash
+        run: |
+          VERSION="0.13.$GITHUB_RUN_NUMBER"
+          {
+            echo "version=$VERSION"
+            echo "url=https://github.com/kingofparty1214/SteamVita-Public/releases/download/dev-latest/SteamVitaPublic"
+          } > update.txt
+          cat update.txt
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SteamVita-Public
+          path: build/SteamVitaPublic
+          if-no-files-found: error
+
+      - name: Publish public development update
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-latest
+          target_commitish: main
+          name: SteamVita Public Development
+          prerelease: false
+          make_latest: true
+          files: |
+            build/SteamVitaPublic
+            update.txt
